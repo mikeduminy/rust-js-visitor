@@ -5,23 +5,25 @@ use oxc_ast::{ast::Argument, ast::Expression, AstKind, Visit};
 use oxc_parser::Parser;
 use oxc_span::{GetSpan, SourceType};
 
-pub fn extract_imports(filename: &String, panic_on_dynamic_errors: bool) -> Vec<String> {
-    let path = Path::new(&filename);
+use crate::logger::Logger;
+
+pub fn extract_imports(path: &Path, panic_on_dynamic_errors: bool) -> Vec<String> {
+    let file_name = path.to_str().unwrap();
     let source_text =
-        std::fs::read_to_string(path).unwrap_or_else(|_| panic!("{filename} not found"));
+        std::fs::read_to_string(path).unwrap_or_else(|_| panic!("{file_name} not found"));
     let allocator = Allocator::default();
     let source_type = SourceType::from_path(path).unwrap();
     let ret = Parser::new(&allocator, &source_text, source_type).parse();
 
     for error in ret.errors {
         let error = error.with_source_code(source_text.clone());
-        println!("{error:?}");
+        Logger::error(&format!("{error:?}"));
     }
 
     let program = ret.program;
 
     let mut ast_pass = ASTPass {
-        file_path: filename.to_string(),
+        file_path: path.to_str().unwrap().to_string(),
         panic_on_dynamic_errors,
         ..Default::default()
     };
@@ -61,9 +63,10 @@ impl<'a> Visit<'a> for ASTPass {
                             ast.span().end,
                         );
                         if self.panic_on_dynamic_errors {
-                            panic!("{}", output)
+                            Logger::error(&output);
+                            panic!("Unexpected error, see logs.")
                         } else {
-                            println!("{}", output)
+                            Logger::warn(&output);
                         }
                     }
                 }
@@ -88,9 +91,10 @@ impl<'a> Visit<'a> for ASTPass {
                                 ast.span().end,
                             );
                             if self.panic_on_dynamic_errors {
-                                panic!("{}", output)
+                                Logger::error(&output);
+                                panic!("Unexpected error, see logs.")
                             } else {
-                                println!("{}", output)
+                                Logger::warn(&output);
                             }
                         }
                     }
