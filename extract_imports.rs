@@ -69,6 +69,7 @@ impl<'a> Visit<'a> for ASTPass {
                 }
             }
             AstKind::CallExpression(ast) => {
+                // Handles require calls, but only with a single string input
                 if ast.is_require_call() {
                     match &ast.arguments[0] {
                         Argument::Expression(Expression::StringLiteral(ast)) => {
