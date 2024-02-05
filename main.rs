@@ -2,7 +2,10 @@ use std::env;
 
 use walkdir::{DirEntry, WalkDir};
 
-pub mod extract_imports;
+use crate::logger::{Level, Logger};
+
+mod logger;
+mod visitor;
 
 // Instructions:
 // create a `test.js`,
@@ -10,12 +13,12 @@ pub mod extract_imports;
 
 fn main() {
     let args = env::args().collect::<Vec<String>>();
-    args.iter().for_each(|arg| println!("{}", arg));
 
     let mut files = vec![];
 
     let mut panic_on_dynamic_errors = true;
 
+    // simple argument parsing
     for arg in args.iter() {
         let positional = !arg.starts_with('-');
 
@@ -51,7 +54,7 @@ fn main() {
 
     let mut package_names = vec![];
 
-    println!("Files: {:?}", files);
+    Logger::log(Level::Info, "Starting to process files and directories");
 
     for file in &files {
         println!("Processing file: {}", file);
@@ -64,7 +67,7 @@ fn main() {
                 continue;
             }
             let mut package_names_for_file =
-                extract_imports::extract_imports(file, panic_on_dynamic_errors);
+                visitor::extract_imports(file, panic_on_dynamic_errors);
             package_names.append(&mut package_names_for_file);
         } else if path.is_dir() {
             println!("Processing directory: {}", file);
@@ -79,13 +82,13 @@ fn main() {
                 if path.is_file() {
                     let file_name = path.to_str().unwrap().to_string();
                     let mut package_names_for_file =
-                        extract_imports::extract_imports(&file_name, panic_on_dynamic_errors);
+                        visitor::extract_imports(&file_name, panic_on_dynamic_errors);
                     package_names.append(&mut package_names_for_file);
                 }
             }
         } else {
             let mut package_names_for_file =
-                extract_imports::extract_imports(file, panic_on_dynamic_errors);
+                visitor::extract_imports(file, panic_on_dynamic_errors);
             package_names.append(&mut package_names_for_file);
         }
     }
